@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grafik Pendapatan - ParkirScan</title>
+    <!-- Tailwind CSS & Chart.js via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen pb-12">
+
+    <!-- Header dengan Tombol Kembali -->
+    <header class="bg-indigo-600 text-white p-4 shadow-md sticky top-0 z-50">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <a href="/"
+                    class="bg-indigo-700 hover:bg-indigo-800 p-2 rounded-lg font-semibold border border-indigo-500 shadow-sm transition-all flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </a>
+                <h1 class="font-bold text-lg">Grafik Pendapatan</h1>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-6">
+
+        <!-- Card Grafik -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+
+            <!-- Filter Periode Grafik -->
+            <div class="flex justify-center gap-1 bg-slate-100 p-1 rounded-xl">
+                <button onclick="loadChart('day')" id="btn-day"
+                    class="btn-chart text-xs px-3 py-1.5 rounded-lg font-semibold bg-white text-indigo-600 shadow-sm">Hari</button>
+                <button onclick="loadChart('week')" id="btn-week"
+                    class="btn-chart text-xs px-3 py-1.5 rounded-lg font-semibold text-slate-500">Minggu</button>
+                <button onclick="loadChart('month')" id="btn-month"
+                    class="btn-chart text-xs px-3 py-1.5 rounded-lg font-semibold text-slate-500">Bulan</button>
+                <button onclick="loadChart('year')" id="btn-year"
+                    class="btn-chart text-xs px-3 py-1.5 rounded-lg font-semibold text-slate-500">Tahun</button>
+            </div>
+
+            <!-- Canvas Tempat Rendering Grafik -->
+            <div class="relative w-full h-72 pt-2">
+                <canvas id="statChart"></canvas>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Script khusus grafik -->
+    <script src="/js/chart.js"></script>
+    <script>
+        // Auto load grafik harian saat halaman terbuka
+        document.addEventListener('DOMContentLoaded', () => {
+            loadChart('day');
+        });
+    </script>
+</body>
+
+</html>

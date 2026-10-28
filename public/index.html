@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Parkir & OCR Plat Nomor</title>
+    <!-- Tailwind CSS, Tesseract.js & Chart.js via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen pb-12">
+
+    <!-- Header dengan Tombol Menu Hamburger -->
+    <header class="bg-indigo-600 text-white p-4 shadow-md sticky top-0 z-50">
+        <div class="max-w-md mx-auto flex justify-between items-center relative">
+            <h1 class="font-bold text-lg">ParkirScan App</h1>
+
+            <!-- Tombol Menu Hamburger -->
+            <div class="relative">
+                <button id="btnMainMenu" onclick="toggleMainMenu(event)"
+                    class="bg-indigo-700 hover:bg-indigo-800 p-2 rounded-lg font-semibold border border-indigo-500 shadow-sm transition-all flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white pointer-events-none" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+
+                <!-- Dropdown Menu Item -->
+                <div id="mainDropdownMenu"
+                    class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 text-slate-700">
+                    <a href="/grafik.html"
+                        class="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-100">
+                        📊 Grafik Pendapatan
+                    </a>
+                    <a href="/setting.html"
+                        class="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors">
+                        ⚙️ Setting
+                    </a>
+                    <a href="/account.html"
+                        class="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors border-b border-slate-100">
+                        👤 Akun
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-6">
+
+        <!-- Card Ringkasan Saldo & Kendaraan -->
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs text-slate-500 font-medium">Saldo Hari Ini</p>
+                <p id="totalSaldo" class="text-xl font-bold text-emerald-600">Rp 0</p>
+                <div class="flex gap-2 mt-1 text-[10px] text-slate-400">
+                    <span>Cash: <b id="subCash" class="text-slate-600">0</b></span>
+                    <span>QRIS: <b id="subQris" class="text-indigo-600">0</b></span>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs text-slate-500 font-medium">Kendaraan di Dalam</p>
+                <p id="totalAktif" class="text-xl font-bold text-indigo-600">0 Unit</p>
+            </div>
+        </div>
+
+        <!-- Section Kamera Scanner -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+            <h2 class="font-semibold text-slate-700 text-sm">Scan Plat Nomor (Kamera HP)</h2>
+
+            <div class="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+                <video id="webcam" autoplay playsinline class="w-full h-full object-cover"></video>
+                <div
+                    class="absolute inset-0 border-2 border-dashed border-yellow-400 m-6 rounded pointer-events-none flex items-center justify-center">
+                    <span class="text-[10px] bg-black/70 text-yellow-300 px-2 py-0.5 rounded">Arahkan Plat Nomor Ke
+                        Sini</span>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="btnStartCam" onclick="startCamera()"
+                    class="flex-1 bg-slate-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-700">Nyalakan
+                    Kamera</button>
+                <button id="btnScan" onclick="scanPlate()"
+                    class="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                    disabled>Scan Plat</button>
+            </div>
+
+            <canvas id="canvas" class="hidden"></canvas>
+            <div id="ocrStatus" class="text-xs text-slate-500 text-center font-medium min-h-[1rem]"></div>
+        </div>
+
+        <!-- Form Input / Konfirmasi Plat Masuk -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+            <h2 class="font-semibold text-slate-700 text-sm">Input / Konfirmasi Plat Masuk</h2>
+            <div class="flex gap-2">
+                <input type="text" id="plateInput" placeholder="Contoh: BG 6951 BH"
+                    class="flex-1 border border-slate-300 rounded-lg px-3 py-2 uppercase font-mono font-bold text-lg tracking-wider focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button onclick="submitMasuk()"
+                    class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700">Masuk</button>
+            </div>
+        </div>
+
+        <!-- Section Riwayat Kendaraan & Filter Range Tanggal -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+            <h2 class="font-semibold text-slate-700 text-sm">Riwayat & Status Kendaraan</h2>
+
+            <div class="space-y-2 pb-2 border-b border-slate-100">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] text-slate-500 block mb-0.5 font-medium">Dari Tanggal</label>
+                        <input type="date" id="filterDateFrom" onchange="fetchRiwayat()"
+                            class="w-full border border-slate-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-500 block mb-0.5 font-medium">Sampai Tanggal</label>
+                        <input type="date" id="filterDateTo" onchange="fetchRiwayat()"
+                            class="w-full border border-slate-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 block mb-0.5 font-medium">Status Kendaraan</label>
+                    <select id="filterStatus" onchange="fetchRiwayat()"
+                        class="w-full border border-slate-300 rounded-md px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="IN">Belum Keluar</option>
+                        <option value="OUT">Sudah Keluar</option>
+                        <option value="ALL">Semua Status</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="listRiwayat" class="space-y-2 max-h-72 overflow-y-auto">
+                <!-- List diproduksi via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL PILIH METODE PEMBAYARAN -->
+    <div id="payModal"
+        class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 text-base">Pembayaran Parkir</h3>
+                <button onclick="closePayModal()"
+                    class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+            </div>
+
+            <div class="text-center space-y-1">
+                <p class="text-xs text-slate-500">Total Tagihan Plat <b id="payPlatText" class="text-slate-800"></b></p>
+                <p id="payAmountText" class="text-2xl font-black text-indigo-600">Rp 0</p>
+            </div>
+
+            <div id="payOptions" class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="confirmPayment('Cash')"
+                    class="border-2 border-slate-200 hover:border-emerald-500 p-4 rounded-xl text-center space-y-1 transition-all">
+                    <p class="font-bold text-slate-800 text-sm">Tunai / Cash</p>
+                    <p class="text-[10px] text-slate-400">Bayar langsung di tempat</p>
+                </button>
+                <button id="btnQrisOption" onclick="showQrisView()"
+                    class="border-2 border-slate-200 hover:border-indigo-500 p-4 rounded-xl text-center space-y-1 transition-all">
+                    <p class="font-bold text-slate-800 text-sm">QRIS</p>
+                    <p class="text-[10px] text-slate-400">Scan QR Code e-Wallet</p>
+                </button>
+            </div>
+
+            <div id="qrisView" class="hidden text-center space-y-3 pt-1">
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 inline-block">
+                    <img id="qrisImg" src="" alt="QRIS Code" class="w-44 h-44 mx-auto rounded-lg shadow-sm">
+                </div>
+                <p class="text-[11px] text-slate-500">Silakan scan QRIS di atas untuk membayar</p>
+                <button onclick="confirmPayment('QRIS')"
+                    class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-md">
+                    Simulasi: Bayar QRIS Berhasil
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETAIL TIKET -->
+    <div id="detailModal"
+        class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 text-base">Detail Tiket Parkir</h3>
+                <button onclick="closeModal()"
+                    class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+            </div>
+
+            <div class="space-y-2.5 text-xs">
+                <div class="flex justify-between border-b pb-1.5">
+                    <span class="text-slate-500">Nomor Tiket:</span>
+                    <span id="mTiket" class="font-mono font-bold text-indigo-600"></span>
+                </div>
+                <div class="flex justify-between border-b pb-1.5">
+                    <span class="text-slate-500">Nomor Plat Kendaraan:</span>
+                    <span id="mPlat" class="font-mono font-bold text-slate-800 text-sm"></span>
+                </div>
+                <div class="flex justify-between border-b pb-1.5">
+                    <span class="text-slate-500">Status Parkir:</span>
+                    <span id="mStatus" class="font-semibold px-2 py-0.5 rounded text-[10px]"></span>
+                </div>
+                <div class="flex justify-between border-b pb-1.5">
+                    <span class="text-slate-500">Waktu Masuk:</span>
+                    <span id="mWaktuMasuk" class="font-medium text-slate-700"></span>
+                </div>
+                <div class="flex justify-between border-b pb-1.5">
+                    <span class="text-slate-500">Waktu Keluar:</span>
+                    <span id="mWaktuKeluar" class="font-medium text-slate-700"></span>
+                </div>
+                <div class="flex justify-between border-b pb-1.5">
+                    <span class="text-slate-500">Total Durasi:</span>
+                    <span id="mDurasi" class="font-medium text-slate-700"></span>
+                </div>
+                <div class="flex justify-between border-b pb-1.5">
+                    <span class="text-slate-500">Tarif Parkir:</span>
+                    <span id="mTarif" class="font-bold text-emerald-600"></span>
+                </div>
+                <div class="flex justify-between border-b pb-1.5">
+                    <span class="text-slate-500">Metode Pembayaran:</span>
+                    <span id="mMetode" class="font-bold text-indigo-600"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Status Pembayaran:</span>
+                    <span id="mBayarStatus" class="font-bold"></span>
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button onclick="closeModal()"
+                    class="w-full bg-slate-800 text-white py-2 rounded-xl text-xs font-semibold hover:bg-slate-700">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT JS TERPISAH -->
+    <script src="/js/camera.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+
+</html>
