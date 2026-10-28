@@ -23,8 +23,7 @@ const otpStore = new Map();
 // KONEKSI SUPABASE (POSTGRESQL)
 // ==========================================
 const pool = new Pool({
-    connectionString: 'GANTI_DENGAN_CONNECTION_STRING_SUPABASE_ANDA',
-    // Contoh: 'postgresql://postgres.xxxx:password@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres'
+    connectionString: 'postgresql://postgres.syvanfoajrzpuesvgqar:AdrianMine310802110503@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres',
     ssl: { rejectUnauthorized: false }
 });
 
@@ -235,8 +234,8 @@ app.get('/api/parkir/riwayat', async (req, res) => {
         let params = [user_id, dateFrom, dateTo];
 
         if (status && status !== 'ALL') {
-            sql += ` AND status = $4`;
             params.push(status);
+            sql += ` AND status = $${params.length}`;
         }
 
         sql += ` ORDER BY time_in DESC`;
